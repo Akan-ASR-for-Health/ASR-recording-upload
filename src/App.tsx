@@ -1,21 +1,32 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import axios from 'axios';
 
+type DataItem = {
+  id: number;
+  content: string;
+  translation: string;
+  prerecord: string;
+};
+
 const App = () => {
-  const [data, setData] = useState([]);
+  const [data, setData] = useState<DataItem[]>([]);
   const [recordingStates, setRecordingStates] = useState<{ [key: number]: boolean }>({});
   const [audioBlobs, setAudioBlobs] = useState<{ [key: number]: Blob | null }>({});
   const [loadingStates, setLoadingStates] = useState<{ [key: number]: boolean }>({});
 
   useEffect(() => {
-    // Fetch data from the GET API
     axios
-      .get('https://akan-recorder-backend-y5er.onrender.com/texts/?skip=0&limit=100')
+      .get<DataItem[]>('https://akan-recorder-backend-y5er.onrender.com/texts/?skip=0&limit=100')
       .then((response) => setData(response.data))
-      .catch((error) => console.error('Error fetching data:', error));
+      .catch((error: unknown) => {
+        if (axios.isAxiosError(error)) {
+          console.error('Error fetching data:', error.message);
+        } else {
+          console.error('An unexpected error occurred:', error);
+        }
+      });
   }, []);
 
-  // Start recording audio for a specific row
   const startRecording = async (id: number) => {
     setRecordingStates((prev) => ({ ...prev, [id]: true }));
     const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
@@ -29,10 +40,9 @@ const App = () => {
     setTimeout(() => {
       mediaRecorder.stop();
       setRecordingStates((prev) => ({ ...prev, [id]: false }));
-    }, 5000); // Record for 5 seconds
+    }, 5000);
   };
 
-  // Handle PUT request to upload audio for a specific row
   const uploadAudio = async (id: number) => {
     const blob = audioBlobs[id];
     if (!blob) {
@@ -72,11 +82,8 @@ const App = () => {
             </tr>
           </thead>
           <tbody>
-            {data.map((item: any, index: number) => (
-              <tr
-                key={item.id}
-                className={index % 2 === 0 ? 'bg-gray-50' : 'bg-gray-100'}
-              >
+            {data.map((item, index) => (
+              <tr key={item.id} className={index % 2 === 0 ? 'bg-gray-50' : 'bg-gray-100'}>
                 <td className="border px-4 py-2 text-center">{item.id}</td>
                 <td className="border px-4 py-2">{item.content}</td>
                 <td className="border px-4 py-2">{item.translation}</td>
