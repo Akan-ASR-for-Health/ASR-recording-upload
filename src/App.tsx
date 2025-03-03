@@ -176,7 +176,7 @@ const App = () => {
 
     try {
       await axios.put(
-        `https://akan-recorder-backend-y5er.onrender.com/texts/${id}/upload`,
+        `https://akan-asr-backend-d5ee511bc4b5.herokuapp.com/texts/${id}/upload`,
         formData,
         { headers: { 'Content-Type': 'multipart/form-data' } }
       );
