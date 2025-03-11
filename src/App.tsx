@@ -46,7 +46,8 @@ const App = () => {
       try {
         const skip = (currentPage - 1) * itemsPerPage;
         const response = await axios.get<DataItem[]>(
-          `https://akan-recorder-backend-y5er.onrender.com/texts/?skip=${skip}&limit=${itemsPerPage}`
+          
+          `https://akan-asr-backend-d5ee511bc4b5.herokuapp.com/texts/?skip=${skip}&limit=${itemsPerPage}`
         );
         setData(response.data);
         setHasMore(response.data.length === itemsPerPage);
