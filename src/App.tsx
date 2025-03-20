@@ -50,7 +50,7 @@ const App = () => {
       // Keep fetching data until we have at least itemsPerPage filtered items or no more data
       while (allFilteredData.length < itemsPerPage && hasMoreData) {
         const response = await axios.get<DataItem[]>(
-          `https://akan-asr-backend-d5ee511bc4b5.herokuapp.com/texts/?skip=${currentSkip}&limit=${itemsPerPage}`
+          `https://akan-asr-backend-d5ee511bc4b5.herokuapp.com/texts/get-no-prerecord?skip=${currentSkip}&limit=${itemsPerPage}`
         );
         
         // Check if we've reached the end of data
