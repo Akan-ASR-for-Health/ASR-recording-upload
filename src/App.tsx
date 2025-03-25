@@ -39,47 +39,32 @@ const App = () => {
   const timerRef = useRef<number | null>(null);
   const [notifications, setNotifications] = useState<Notification[]>([]);
 
-  const fetchData = async () => {
+    const fetchData = async () => {
     setLoading(true);
     setError(null);
     try {
-      let allFilteredData: DataItem[] = [];
-      let currentSkip = (currentPage - 1) * itemsPerPage;
-      let hasMoreData = true;
+      // Calculate the page to fetch - we'll request a larger batch to increase 
+      // chances of getting enough matching records
+      const skip = (currentPage - 1) * itemsPerPage;
+      const batchSize = itemsPerPage * 3; // Request more items to increase chance of finding matches
       
-      // Keep fetching data until we have at least itemsPerPage filtered items or no more data
-      while (allFilteredData.length < itemsPerPage && hasMoreData) {
-        const response = await axios.get<DataItem[]>(
-          `https://akan-asr-backend-d5ee511bc4b5.herokuapp.com/texts/get-no-prerecord?skip=${currentSkip}&limit=${itemsPerPage}`
-        );
-        
-        // Check if we've reached the end of data
-        if (response.data.length === 0) {
-          hasMoreData = false;
-          break;
-        }
-        
-        // Filter items where prerecord equals 'string'
-        const filteredBatch = response.data.filter(
-          item => item.prerecord && item.prerecord.trim() === 'string'
-        );
-        
-        // Add filtered items to our collection
-        allFilteredData = [...allFilteredData, ...filteredBatch];
-        
-        // If response had fewer items than requested, we've reached the end
-        if (response.data.length < itemsPerPage) {
-          hasMoreData = false;
-        } else {
-          currentSkip += itemsPerPage;
-        }
-      }
+      const response = await axios.get<DataItem[]>(
+        `https://akan-asr-backend-d5ee511bc4b5.herokuapp.com/texts/?skip=${skip}&limit=${batchSize}`
+      );
+      
+      // Filter items where prerecord equals 'string'
+      const filteredData = response.data.filter(
+        item => item.prerecord && item.prerecord.trim() === 'string'
+      );
       
       // Set the data with only what we need for this page
-      setData(allFilteredData.slice(0, itemsPerPage));
+      setData(filteredData.slice(0, itemsPerPage));
       
-      // Set hasMore based on if there are more filtered items or more data to fetch
-      setHasMore(allFilteredData.length > itemsPerPage || hasMoreData);
+      // Determine if there might be more data
+      setHasMore(
+        filteredData.length > itemsPerPage || // More filtered items than we're showing
+        (response.data.length === batchSize)   // Full batch returned, might be more
+      );
     } catch (error) {
       setError('Failed to fetch data. Please try again later.');
       console.error('Error fetching data:', error);
@@ -87,7 +72,7 @@ const App = () => {
       setLoading(false);
     }
   };
-
+  
   useEffect(() => {
     fetchData();
   }, [currentPage, itemsPerPage]);
