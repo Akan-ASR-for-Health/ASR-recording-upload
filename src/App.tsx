@@ -1,6 +1,7 @@
+
 import { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
-import { Mic, Play, Square, Upload,CheckCircle, XCircle } from 'lucide-react';
+import { Mic, Play, Square, Upload, CheckCircle, XCircle, Edit, Save, X } from 'lucide-react';
 
 type DataItem = {
   id: number;
@@ -33,13 +34,16 @@ const App = () => {
   const [recordingTime, setRecordingTime] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const [uploading, setUploading] = useState<number | null>(null);
+  const [editingId, setEditingId] = useState<number | null>(null);
+  const [editTranslation, setEditTranslation] = useState<string>('');
+  const [savingTranslation, setSavingTranslation] = useState<boolean>(false);
 
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const timerRef = useRef<number | null>(null);
   const [notifications, setNotifications] = useState<Notification[]>([]);
 
-    const fetchData = async () => {
+  const fetchData = async () => {
     setLoading(true);
     setError(null);
     try {
@@ -212,6 +216,47 @@ const App = () => {
     }
   };
 
+  const startEditingTranslation = (item: DataItem) => {
+    setEditingId(item.id);
+    setEditTranslation(item.translation);
+  };
+
+  const cancelEditingTranslation = () => {
+    setEditingId(null);
+    setEditTranslation('');
+  };
+
+  const saveTranslation = async (id: number) => {
+    setSavingTranslation(true);
+    setError(null);
+    
+    try {
+      await axios.put(
+        `https://akan-asr-backend-d5ee511bc4b5.herokuapp.com/texts/${id}/edit`,
+        { translation: editTranslation }
+      );
+      
+      // Update local state
+      setData(prevData => 
+        prevData.map(item => 
+          item.id === id ? { ...item, translation: editTranslation } : item
+        )
+      );
+      
+      // Reset editing state
+      setEditingId(null);
+      setEditTranslation('');
+      
+      // Add success notification
+      addNotification('success', 'Translation updated successfully!', id);
+    } catch (error) {
+      addNotification('error', 'Failed to update translation. Please try again.', id);
+      console.error('Error updating translation:', error);
+    } finally {
+      setSavingTranslation(false);
+    }
+  };
+
   const formatTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
     const secs = seconds % 60;
@@ -220,8 +265,8 @@ const App = () => {
 
   return (
     <div className="min-h-screen bg-gray-100 p-6">
-{/* Notifications container */}
-<div className="fixed top-4 right-4 z-50">
+      {/* Notifications container */}
+      <div className="fixed top-4 right-4 z-50">
         {notifications.map((notification) => (
           <div
             key={notification.timestamp}
@@ -270,7 +315,49 @@ const App = () => {
                 <tr key={item.id} className={index % 2 === 0 ? 'bg-gray-50' : 'bg-white'}>
                   <td className="border px-4 py-2 text-center">{item.id}</td>
                   <td className="border px-4 py-2">{item.content}</td>
-                  <td className="border px-4 py-2">{item.translation}</td>
+                  <td className="border px-4 py-2">
+                    {editingId === item.id ? (
+                      <div className="flex flex-col space-y-2">
+                        <textarea
+                          value={editTranslation}
+                          onChange={(e) => setEditTranslation(e.target.value)}
+                          className="border p-2 rounded-md w-full"
+                          rows={3}
+                        />
+                        <div className="flex space-x-2">
+                          <button
+                            onClick={() => saveTranslation(item.id)}
+                            disabled={savingTranslation}
+                            className="bg-green-500 hover:bg-green-600 text-white px-2 py-1 rounded-md flex items-center"
+                          >
+                            {savingTranslation ? (
+                              <div className="h-4 w-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-1"></div>
+                            ) : (
+                              <Save className="h-4 w-4 mr-1" />
+                            )}
+                            Save
+                          </button>
+                          <button
+                            onClick={cancelEditingTranslation}
+                            className="bg-gray-500 hover:bg-gray-600 text-white px-2 py-1 rounded-md flex items-center"
+                          >
+                            <X className="h-4 w-4 mr-1" />
+                            Cancel
+                          </button>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="flex justify-between items-center">
+                        <span>{item.translation}</span>
+                        <button
+                          onClick={() => startEditingTranslation(item)}
+                          className="text-blue-500 hover:text-blue-700"
+                        >
+                          <Edit className="h-4 w-4" />
+                        </button>
+                      </div>
+                    )}
+                  </td>
                   <td className="border px-4 py-2">{item.prerecord}</td>
                   <td className="border px-4 py-2">
                     <div className="flex items-center justify-center space-x-2">
@@ -347,7 +434,5 @@ const App = () => {
     </div>
   );
 };
-
-
 
 export default App;
